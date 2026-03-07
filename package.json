@@ -1,6 +1,6 @@
 {
   "name": "@exalabs/ai-sdk",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Exa web search tool for Vercel AI SDK",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -35,13 +35,14 @@
     "url": "https://github.com/exa-labs/exa-ai-sdk/issues"
   },
   "peerDependencies": {
-    "ai": "^5.0.83"
+    "ai": "^5.0.83 || ^6.0.0"
   },
   "dependencies": {
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "ai": "^6.0.116",
     "typescript": "^5.0.0"
   }
 }
