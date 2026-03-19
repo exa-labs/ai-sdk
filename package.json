@@ -1,6 +1,6 @@
 {
   "name": "@exalabs/ai-sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Exa web search tool for Vercel AI SDK",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -42,6 +42,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.3.0"
   }
 }
