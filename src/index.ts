@@ -1,7 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { ExaSearchConfig } from "./types";
-import packageJson from "../package.json";
+
+declare const __PKG_VERSION__: string;
 
 /**
  * Creates a web search tool powered by Exa for use with Vercel AI SDK
@@ -128,7 +129,7 @@ export function webSearch(config: ExaSearchConfig = {}) {
             "Content-Type": "application/json",
             "x-api-key": apiKey,
             "x-exa-integration": "vercel-ai-sdk",
-            "User-Agent": `exa-vercel-ai-sdk ${packageJson.version}`,
+            "User-Agent": `exa-vercel-ai-sdk ${__PKG_VERSION__}`,
           },
           body: JSON.stringify(requestBody),
         });
