@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { ExaSearchConfig } from "./types";
-import packageJson from "../package.json";
+import packageJson from "../package.json" with { type: "json" };
 
 /**
  * Creates a web search tool powered by Exa for use with Vercel AI SDK
