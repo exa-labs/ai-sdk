@@ -42,13 +42,14 @@
     "url": "https://github.com/exa-labs/exa-ai-sdk/issues"
   },
   "peerDependencies": {
-    "ai": "^6.0.0"
+    "ai": "^6.0.191"
   },
   "dependencies": {
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "ai": "^6.0.191",
     "tsup": "^8.5.1",
     "typescript": "^5.3.0"
   }
