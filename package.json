@@ -42,7 +42,7 @@
     "url": "https://github.com/exa-labs/exa-ai-sdk/issues"
   },
   "peerDependencies": {
-    "ai": "^6.0.0"
+    "ai": "^6.0.193"
   },
   "dependencies": {
     "zod": "^3.22.0"
