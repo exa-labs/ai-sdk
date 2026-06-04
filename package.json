@@ -22,6 +22,9 @@
     "build": "tsup",
     "prepublishOnly": "npm run build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "exa",
     "search",
@@ -36,10 +39,10 @@
   "homepage": "https://exa.ai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/exa-labs/exa-ai-sdk.git"
+    "url": "git+https://github.com/exa-labs/ai-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/exa-labs/exa-ai-sdk/issues"
+    "url": "https://github.com/exa-labs/ai-sdk/issues"
   },
   "peerDependencies": {
     "ai": "^6.0.0"
