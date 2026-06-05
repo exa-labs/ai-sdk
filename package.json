@@ -1,6 +1,6 @@
 {
   "name": "@exalabs/ai-sdk",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Exa web search tool for Vercel AI SDK",
   "type": "module",
   "main": "./dist/index.cjs",
