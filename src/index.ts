@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { ExaSearchConfig } from "./types";
+import type { ContentsOptions, ExaApiResponse, ExaSearchConfig } from "./types";
 
 declare const __PKG_VERSION__: string;
 
@@ -27,7 +27,9 @@ declare const __PKG_VERSION__: string;
  * ```
  */
 
-export function webSearch(config: ExaSearchConfig = {}) {
+export function webSearch<TOutput = unknown>(
+  config: ExaSearchConfig<TOutput> = {},
+) {
   const {
     apiKey = process.env.EXA_API_KEY,
     ...searchOptions
@@ -38,19 +40,17 @@ export function webSearch(config: ExaSearchConfig = {}) {
     inputSchema: z.object({
       query: z.string().min(1).max(500).describe("The web search query - be specific and clear about what you're looking for"),
     }),
-    execute: async ({ query }) => {
+    execute: async ({ query }): Promise<ExaApiResponse<TOutput>> => {
       if (!apiKey) {
         throw new Error("EXA_API_KEY is required. Set it in environment variables or pass it in config.");
       }
 
-      // Build the request body matching Exa API structure
-      const requestBody: any = {
+      const requestBody: Record<string, unknown> = {
         query,
         type: searchOptions.type || "auto",
-        numResults: searchOptions.numResults || 10,
+        numResults: searchOptions.numResults ?? 10,
       };
 
-      // Add optional search parameters
       if (searchOptions.category) {
         requestBody.category = searchOptions.category;
       }
@@ -81,47 +81,58 @@ export function webSearch(config: ExaSearchConfig = {}) {
       if (searchOptions.excludeText && searchOptions.excludeText.length > 0) {
         requestBody.excludeText = searchOptions.excludeText;
       }
-
-      // Build contents object with defaults
-      // Defaults: text with 1000 chars, livecrawl: "fallback"
-      const contents = searchOptions.contents || {};
-      requestBody.contents = {};
-
-      // Handle text content
-      if (contents.text !== undefined) {
-        if (typeof contents.text === "boolean") {
-          requestBody.contents.text = contents.text;
-        } else {
-          requestBody.contents.text = contents.text;
-        }
-      } else {
-        // Default: get text with 3000 characters
-        requestBody.contents.text = { maxCharacters: 3000 };
+      if (searchOptions.systemPrompt) {
+        requestBody.systemPrompt = searchOptions.systemPrompt;
+      }
+      if (searchOptions.outputSchema) {
+        requestBody.outputSchema = searchOptions.outputSchema;
       }
 
-      // Add other content options
+      const contents: ContentsOptions = searchOptions.contents || {};
+      const requestContents: Record<string, unknown> = {};
+      requestBody.contents = requestContents;
+      const hasContentExtraction =
+        contents.text !== undefined ||
+        contents.highlights !== undefined ||
+        contents.summary !== undefined;
+
+      if (contents.text !== undefined) {
+        requestContents.text = contents.text;
+      } else if (!hasContentExtraction) {
+        requestContents.text = { maxCharacters: 3000 };
+      }
+
       if (contents.highlights !== undefined) {
-        requestBody.contents.highlights = contents.highlights;
+        requestContents.highlights = contents.highlights;
       }
       if (contents.summary !== undefined) {
-        requestBody.contents.summary = contents.summary;
+        requestContents.summary = contents.summary;
       }
-      // Set livecrawl (default: "fallback")
-      requestBody.contents.livecrawl = contents.livecrawl || "fallback";
-      if (contents.livecrawlTimeout) {
-        requestBody.contents.livecrawlTimeout = contents.livecrawlTimeout;
+      if (contents.maxAgeHours !== undefined) {
+        requestContents.maxAgeHours = contents.maxAgeHours;
+      }
+      if (contents.livecrawl !== undefined) {
+        requestContents.livecrawl = contents.livecrawl;
+      } else if (contents.maxAgeHours === undefined) {
+        requestContents.livecrawl = "fallback";
+      }
+      if (contents.livecrawlTimeout !== undefined) {
+        requestContents.livecrawlTimeout = contents.livecrawlTimeout;
       }
       if (contents.subpages !== undefined) {
-        requestBody.contents.subpages = contents.subpages;
+        requestContents.subpages = contents.subpages;
       }
-      if (contents.subpageTarget) {
-        requestBody.contents.subpageTarget = contents.subpageTarget;
+      if (contents.subpageTarget !== undefined) {
+        requestContents.subpageTarget = contents.subpageTarget;
       }
-      if (contents.extras) {
-        requestBody.contents.extras = contents.extras;
+      if (contents.extras !== undefined) {
+        requestContents.extras = contents.extras;
       }
 
-      // Call Exa API
+      if (Object.keys(requestContents).length === 0) {
+        delete requestBody.contents;
+      }
+
       try {
         const response = await fetch("https://api.exa.ai/search", {
           method: "POST",
@@ -139,9 +150,7 @@ export function webSearch(config: ExaSearchConfig = {}) {
           throw new Error(`Exa API error: ${response.status} - ${errorText}`);
         }
 
-        // Return the full API response for maximum flexibility and future-proofing
-        const data = await response.json();
-        return data;
+        return await response.json() as ExaApiResponse<TOutput>;
       } catch (error) {
         if (error instanceof Error) {
           throw new Error(`Failed to search with Exa: ${error.message}`);
@@ -153,13 +162,22 @@ export function webSearch(config: ExaSearchConfig = {}) {
 }
 
 // Export types for users
-export type { 
-  ExaSearchConfig, 
-  ExaSearchResult,
+export type {
   ContentsOptions,
-  TextOptions,
-  HighlightsOptions,
-  SummaryOptions,
+  CurrentExaSearchCategory,
+  CurrentExaSearchType,
+  ExaApiResponse,
+  ExaSearchCategory,
+  ExaSearchConfig,
+  ExaSearchOutput,
+  ExaSearchResult,
+  ExaSearchType,
+  ExaTextSection,
   ExtrasOptions,
+  HighlightsOptions,
+  JsonSchema,
+  LegacyExaSearchCategory,
+  LegacyExaSearchType,
+  SummaryOptions,
+  TextOptions,
 } from "./types";
-

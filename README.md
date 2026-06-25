@@ -1,6 +1,6 @@
 # Exa AI SDK
 
-Exa is a Websearch API. Add Exa websearch tool to your LLMs in just a few lines of code. Giving your AI apps websearch capabilites. Works with AI SDK by Vercel.
+Exa is a Web Search API. Add Exa web search to your LLMs in a few lines of code. Works with AI SDK by Vercel.
 
 ## Table of Contents
 
@@ -8,6 +8,7 @@ Exa is a Websearch API. Add Exa websearch tool to your LLMs in just a few lines 
 - [Quick Start](#quick-start)
 - [Setup](#setup)
 - [Example](#example)
+- [Structured Output](#structured-output)
 - [All Options](#all-options)
 - [TypeScript Support](#typescript-support)
 - [Links](#links)
@@ -45,7 +46,7 @@ Get your API key from the [Exa Dashboard](https://dashboard.exa.ai/api-keys).
 - Type: `auto` (best search)
 - Results: `10`
 - Text: `3000 characters per result`
-- Livecrawl: `fallback` (fresh content when needed)
+- Livecrawl: `fallback` for backwards compatibility. Prefer `contents.maxAgeHours` when you need explicit freshness.
 
 ## Setup
 
@@ -60,21 +61,21 @@ That's it! The package reads it automatically.
 
 ## Example
 
-Here's a full-featured example combining the most useful search settings:
+Here's a focused example combining current Search settings:
 
 ```typescript
 const { text } = await generateText({
   model: openai('gpt-5-nano'),
-  prompt: 'Find the top AI companies in Europe founded after 2018',
+  prompt: 'Find recent AI regulation news from trusted sources',
   tools: {
     webSearch: webSearch({
-      type: "auto",                           // intelligent hybrid search
+      type: "fast",                           // low-latency search
       numResults: 6,                          // return up to 6 results
-      category: "company",                    // focus on companies
+      category: "news",                       // focus on news
+      includeDomains: ["reuters.com", "bbc.com"],
       contents: {
-        text: { maxCharacters: 1000 },        // get up to 1000 chars per result
-        livecrawl: "preferred",               // always get fresh content if possible
-        summary: true,                        // return an AI-generated summary for each result
+        highlights: { maxCharacters: 800 },   // token-efficient excerpts
+        maxAgeHours: 24,                      // prefer fresh content
       },
     }),
   },
@@ -84,14 +85,66 @@ const { text } = await generateText({
 console.log(text);
 ```
 
+## Structured Output
+
+Use `systemPrompt` and `outputSchema` to ask Exa for generated structured output in addition to the retrieved results:
+
+```typescript
+type CompanyFunding = {
+  companies: Array<{
+    name: string;
+    latestRound: string;
+    sourceUrl: string;
+  }>;
+};
+
+const { toolResults } = await generateText({
+  model: openai('gpt-5-nano'),
+  prompt: 'Find recent AI company funding announcements in Europe',
+  tools: {
+    webSearch: webSearch<CompanyFunding>({
+      type: "deep-lite",
+      systemPrompt: "Prefer primary sources and include the source URL for each company.",
+      outputSchema: {
+        type: "object",
+        properties: {
+          companies: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                latestRound: { type: "string" },
+                sourceUrl: { type: "string" },
+              },
+              required: ["name", "latestRound", "sourceUrl"],
+            },
+          },
+        },
+        required: ["companies"],
+      },
+      contents: {
+        highlights: true,
+      },
+    }),
+  },
+  stopWhen: stepCountIs(3),
+});
+
+const searchResult = toolResults[0]?.output;
+const structured = searchResult?.output?.content;
+```
+
 ## All Options
 
 ```typescript
 webSearch({
   // Search settings
-  type: "auto",           // "auto", "keyword", "neural", "fast", "deep"
-  category: "news",       // "company", "research paper", "news", "pdf", 
-                          // "github", "personal site", "linkedin profile", "financial report"
+  type: "auto",           // "auto", "fast", "instant", "deep-lite", "deep", "deep-reasoning"
+                          // Legacy values "keyword" and "neural" are still accepted
+  category: "news",       // "company", "people", "research paper", "news",
+                          // "personal site", "financial report"
+                          // Legacy values "pdf", "github", "linkedin profile" are still accepted
   numResults: 10,
   
   // Filter by domain
@@ -110,17 +163,35 @@ webSearch({
   
   // Location
   userLocation: "US",     // Two-letter country code
+
+  // Structured output
+  systemPrompt: "Prefer primary sources.",
+  outputSchema: {
+    type: "object",
+    properties: {
+      answer: { type: "string" },
+      sourceUrls: { type: "array", items: { type: "string" } },
+    },
+    required: ["answer", "sourceUrls"],
+  },
   
   // Content options
   contents: {
+    // Pick one of text, highlights, or summary by default; all are shown here for reference.
     text: {
       maxCharacters: 1000,
       includeHtmlTags: false,
+      verbosity: "standard",
+      includeSections: ["body"],
+    },
+    highlights: {
+      maxCharacters: 800,
     },
     summary: {
       query: "Main points",
     },
-    livecrawl: "fallback",     // "never", "fallback", "always", "preferred"
+    maxAgeHours: 24,           // Preferred freshness control
+    livecrawl: "fallback",     // Legacy: "never", "fallback", "always", "preferred"
     livecrawlTimeout: 10000,
     subpages: 5,
     subpageTarget: "about",
@@ -134,17 +205,19 @@ webSearch({
 
 ## TypeScript Support
 
-Full TypeScript types included:
+Full TypeScript types included, including typed structured output:
 
 ```typescript
 import { webSearch, ExaSearchConfig, ExaSearchResult } from "@exalabs/ai-sdk";
 
-const config: ExaSearchConfig = {
+type ResearchOutput = { answer: string; sourceUrls: string[] };
+
+const config: ExaSearchConfig<ResearchOutput> = {
   numResults: 10,
-  type: "auto",
+  type: "deep-lite",
 };
 
-const search = webSearch(config);
+const search = webSearch<ResearchOutput>(config);
 ```
 
 ## Links
@@ -154,7 +227,7 @@ const search = webSearch(config);
 - [Vercel AI SDK Cookbook](https://ai-sdk.dev/cookbook/node/web-search-agent#exa) - Web search agent example featuring Exa
 - [API Dashboard](https://dashboard.exa.ai) - Try Exa API on the dashboard
 - [Get your API Keys](https://dashboard.exa.ai/api-keys) - Get your API keys
-- [Documentation](https://docs.exa.ai) - Exa API documentation
+- [Documentation](https://exa.ai/docs) - Exa API documentation
 - [Exa Website](https://exa.ai) - Learn more about Exa
 
 ## License
