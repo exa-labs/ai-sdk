@@ -1,4 +1,59 @@
 /**
+ * JSON Schema used by Exa structured output.
+ */
+export type JsonSchema = Record<string, unknown>;
+
+/**
+ * Current Exa search modes.
+ */
+export type CurrentExaSearchType =
+  | "auto"
+  | "fast"
+  | "instant"
+  | "deep-lite"
+  | "deep"
+  | "deep-reasoning";
+
+/**
+ * Legacy search modes accepted for backwards compatibility.
+ */
+export type LegacyExaSearchType = "keyword" | "neural";
+
+export type ExaSearchType = CurrentExaSearchType | LegacyExaSearchType;
+
+/**
+ * Current documented Exa search categories.
+ */
+export type CurrentExaSearchCategory =
+  | "company"
+  | "people"
+  | "research paper"
+  | "news"
+  | "personal site"
+  | "financial report";
+
+/**
+ * Legacy categories accepted for backwards compatibility.
+ */
+export type LegacyExaSearchCategory =
+  | "pdf"
+  | "github"
+  | "linkedin profile";
+
+export type ExaSearchCategory =
+  | CurrentExaSearchCategory
+  | LegacyExaSearchCategory;
+
+export type ExaTextSection =
+  | "header"
+  | "navigation"
+  | "banner"
+  | "body"
+  | "sidebar"
+  | "footer"
+  | "metadata";
+
+/**
  * Text content options
  */
 export interface TextOptions {
@@ -6,6 +61,12 @@ export interface TextOptions {
   maxCharacters?: number;
   /** Include HTML tags in the response */
   includeHtmlTags?: boolean;
+  /** Text detail level */
+  verbosity?: "compact" | "standard" | "full";
+  /** Sections to include in extracted text */
+  includeSections?: ExaTextSection[];
+  /** Sections to exclude from extracted text */
+  excludeSections?: ExaTextSection[];
 }
 
 /**
@@ -20,12 +81,14 @@ export interface SummaryOptions {
  * Highlights options - text snippets the LLM identifies as most relevant from each page
  */
 export interface HighlightsOptions {
-  /** Number of sentences to return for each snippet */
-  numSentences?: number;
-  /** Number of snippets to return for each result */
-  highlightsPerUrl?: number;
+  /** Maximum characters for each highlight */
+  maxCharacters?: number;
   /** Custom query to direct the LLM's selection of highlights */
   query?: string;
+  /** @deprecated Prefer maxCharacters for fixed budgets. */
+  numSentences?: number;
+  /** @deprecated Prefer maxCharacters for fixed budgets. */
+  highlightsPerUrl?: number;
 }
 
 /**
@@ -48,7 +111,9 @@ export interface ContentsOptions {
   highlights?: boolean | HighlightsOptions;
   /** Get AI-generated summary */
   summary?: boolean | SummaryOptions;
-  /** Livecrawl mode (default: "fallback"): "never", "fallback", "always", "preferred" */
+  /** Freshness control in hours. Use 0 to force live crawl or -1 for cache-only. */
+  maxAgeHours?: number;
+  /** @deprecated Prefer maxAgeHours for new integrations. */
   livecrawl?: "never" | "fallback" | "always" | "preferred";
   /** Livecrawl timeout in milliseconds */
   livecrawlTimeout?: number;
@@ -63,7 +128,7 @@ export interface ContentsOptions {
 /**
  * Main search configuration
  */
-export interface ExaSearchConfig {
+export interface ExaSearchConfig<TOutput = unknown> {
   /**
    * Your Exa API key. Get one at https://dashboard.exa.ai/api-keys
    * Defaults to process.env.EXA_API_KEY
@@ -72,18 +137,20 @@ export interface ExaSearchConfig {
   
   /**
    * Search type (default: "auto")
-   * - auto: Best search, intelligently combines keyword and neural
-   * - keyword: Fast keyword search
-   * - neural: Deep semantic search
-   * - fast: Streamlined versions of neural and keyword
-   * - deep: Comprehensive deep search with enhanced analysis
+   * - auto: General default
+   * - fast: Low-latency apps
+   * - instant: Lowest-latency path
+   * - deep-lite: Lightweight synthesized output
+   * - deep: Multi-step synthesis
+   * - deep-reasoning: Hardest research tasks
+   * - keyword/neural: Legacy aliases kept for backwards compatibility
    */
-  type?: "auto" | "keyword" | "neural" | "fast" | "deep";
+  type?: ExaSearchType;
   
   /**
    * Category to focus the search on
    */
-  category?: "company" | "research paper" | "news" | "pdf" | "github" | "personal site" | "linkedin profile" | "financial report";
+  category?: ExaSearchCategory;
   
   /**
    * Two-letter ISO country code for localized results (e.g., "US")
@@ -91,8 +158,7 @@ export interface ExaSearchConfig {
   userLocation?: string;
   
   /**
-   * Number of results to return (default: 8)
-   * Keyword max: 10, Neural max: 100
+   * Number of results to return (default: 10)
    */
   numResults?: number;
   
@@ -135,6 +201,16 @@ export interface ExaSearchConfig {
    * Text that must not be present in results (max 1 string, up to 5 words)
    */
   excludeText?: string[];
+
+  /**
+   * Instructions for synthesized output and deep-search planning
+   */
+  systemPrompt?: string;
+
+  /**
+   * JSON Schema for structured output returned in output.content
+   */
+  outputSchema?: JsonSchema;
   
   /**
    * Contents options - what to retrieve from each result
@@ -178,18 +254,32 @@ export interface ExaSearchResult {
 }
 
 /**
+ * Structured output returned when outputSchema or synthesis options are used
+ */
+export interface ExaSearchOutput<TContent = unknown> {
+  /** Structured or synthesized content returned by Exa */
+  content: TContent;
+  /** Grounding/citation metadata for the generated output */
+  grounding?: Array<Record<string, unknown>>;
+  /** Any additional output metadata from the API */
+  [key: string]: unknown;
+}
+
+/**
  * API response from Exa search endpoint
  * This includes the full response with all metadata for maximum flexibility
  */
-export interface ExaApiResponse {
+export interface ExaApiResponse<TOutput = unknown> {
   /** Unique request ID */
   requestId?: string;
   /** The search type that was ultimately used */
-  resolvedSearchType?: "neural" | "keyword" | "fast" | "deep";
+  resolvedSearchType?: string;
   /** Array of search results */
   results: ExaSearchResult[];
+  /** Structured or synthesized output */
+  output?: ExaSearchOutput<TOutput>;
   /** Detailed request tags and metadata */
-  requestTags?: Record<string, any>;
+  requestTags?: Record<string, unknown>;
   /** Filters that were applied to the search */
   effectiveFilters?: {
     includeDomains?: string[];
@@ -208,6 +298,5 @@ export interface ExaApiResponse {
     contents?: Record<string, number>;
   };
   /** Any additional fields from the API */
-  [key: string]: any;
+  [key: string]: unknown;
 }
-
