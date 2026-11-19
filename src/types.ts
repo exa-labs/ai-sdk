@@ -69,6 +69,12 @@ export interface ExaSearchConfig {
    * Defaults to process.env.EXA_API_KEY
    */
   apiKey?: string;
+
+  /**
+   * Base URL of the Exa API, e.g. "https://api.eu.exa.ai" for EU data residency.
+   * Defaults to process.env.EXA_BASE_URL, then "https://api.exa.ai"
+   */
+  baseURL?: string;
   
   /**
    * Search type (default: "auto")

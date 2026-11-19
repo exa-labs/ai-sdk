@@ -58,6 +58,14 @@ EXA_API_KEY=your-api-key-here
 
 That's it! The package reads it automatically.
 
+To run searches in the EU, set the EU API host with an EU team key:
+
+```bash
+EXA_BASE_URL=https://api.eu.exa.ai
+```
+
+or pass it per tool: `webSearch({ baseURL: "https://api.eu.exa.ai" })`.
+
 ## Example
 
 Here's a full-featured example combining the most useful search settings:
@@ -88,6 +96,10 @@ console.log(text);
 
 ```typescript
 webSearch({
+  // API settings (default to EXA_API_KEY and EXA_BASE_URL)
+  apiKey: "your-api-key",
+  baseURL: "https://api.exa.ai",
+
   // Search settings
   type: "auto",           // "auto", "keyword", "neural", "fast", "deep"
   category: "news",       // "company", "research paper", "news", "pdf", 

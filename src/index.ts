@@ -30,8 +30,10 @@ declare const __PKG_VERSION__: string;
 export function webSearch(config: ExaSearchConfig = {}) {
   const {
     apiKey = process.env.EXA_API_KEY,
+    baseURL = process.env.EXA_BASE_URL || "https://api.exa.ai",
     ...searchOptions
   } = config;
+  const searchUrl = `${baseURL.replace(/\/+$/, "")}/search`;
 
   return tool({
     description: "Search the web for code docs, current information, news, articles, and content. Use this when you need up-to-date information or facts from the internet. Performs real-time web searches and can scrape content from specific URLs.",
@@ -123,7 +125,7 @@ export function webSearch(config: ExaSearchConfig = {}) {
 
       // Call Exa API
       try {
-        const response = await fetch("https://api.exa.ai/search", {
+        const response = await fetch(searchUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
